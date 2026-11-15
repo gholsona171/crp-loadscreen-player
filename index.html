@@ -153,6 +153,7 @@ function onState(e) {
         noStarts = 0;
         clearTimeout(loadTimer);
         if (!muted) { player.unMute(); player.setVolume(volume); }
+        setTimeout(function () { log('sound ' + (player.isMuted() ? 'off' : 'on') + ' vol ' + player.getVolume()); }, 1500);
         fade.classList.add('clear');
         const data = player.getVideoData ? player.getVideoData() : null;
         tell({ type: 'playing', title: (data && data.title) || '' });
