@@ -115,25 +115,19 @@ let kickTimers = [];
 function watchStart(track) {
     clearTimeout(loadTimer);
     kickTimers.forEach(clearTimeout);
-    // a fresh player's first video can buffer and drop back to "unstarted" in FiveM's browser: nudge it at 5 s, load it
-    // again at 12 s
+    // a video that sits "unstarted" gets one nudge at 5 s (a YouTube ad before it shows as unstarted / buffering too)
     kickTimers = [
         setTimeout(function () {
             if (current === track && !shown && !switching) { log('kick play ' + track.id); player.playVideo(); }
         }, 5000),
-        setTimeout(function () {
-            if (current !== track || shown || switching) return;
-            log('reload ' + track.id);
-            player.loadVideoById({ videoId: track.id, startSeconds: track.start || 0, endSeconds: track.end || undefined });
-        }, 12000),
     ];
-    // a video that doesn't start in 30 s (the game is busy loading, slow connection) is skipped, not blacklisted
+    // a video that doesn't start in 45 s (an ad, the game busy loading, slow connection) is skipped, not blacklisted
     loadTimer = setTimeout(function () {
         if (current !== track || shown) return;
         noStarts++;
-        log('no start in 30s ' + track.id + ' (' + noStarts + ' in a row)');
+        log('no start in 45s ' + track.id + ' (' + noStarts + ' in a row)');
         if (noStarts >= 3) fail(); else playTrack(step(1));
-    }, 30000);
+    }, 45000);
 }
 
 function playTrack(track) {
@@ -145,9 +139,8 @@ function playTrack(track) {
     tell({ type: 'changing' });
     setTimeout(function () {
         if (current !== track) return;   // skipped again during the fade
+        player.mute();   // stays muted until the video itself plays: an ad before it plays silently under the cover
         player.loadVideoById({ videoId: track.id, startSeconds: track.start || 0, endSeconds: track.end || undefined });
-        if (muted) player.mute(); else player.unMute();
-        player.setVolume(volume);
         switching = false;
     }, 700);
     watchStart(track);
@@ -159,6 +152,7 @@ function onState(e) {
         shown = true;
         noStarts = 0;
         clearTimeout(loadTimer);
+        if (!muted) { player.unMute(); player.setVolume(volume); }
         fade.classList.add('clear');
         const data = player.getVideoData ? player.getVideoData() : null;
         tell({ type: 'playing', title: (data && data.title) || '' });
@@ -230,7 +224,7 @@ window.addEventListener('message', function (e) {
         playTrack(step(-1));
     } else if (d.type === 'mute') {
         muted = !!d.muted;
-        if (muted) player.mute(); else { player.unMute(); player.setVolume(volume); }
+        if (muted) player.mute(); else if (shown) { player.unMute(); player.setVolume(volume); }
     }
 });
 
