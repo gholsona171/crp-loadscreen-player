@@ -110,8 +110,23 @@ function step(dir) {
 
 let noStarts = 0;   // videos in a row that never started; 3 = YouTube isn't working here, give up
 
+let kickTimers = [];
+
 function watchStart(track) {
     clearTimeout(loadTimer);
+    kickTimers.forEach(clearTimeout);
+    // a fresh player's first video can buffer and drop back to "unstarted" in FiveM's browser: nudge it at 5 s, load it
+    // again at 12 s
+    kickTimers = [
+        setTimeout(function () {
+            if (current === track && !shown && !switching) { log('kick play ' + track.id); player.playVideo(); }
+        }, 5000),
+        setTimeout(function () {
+            if (current !== track || shown || switching) return;
+            log('reload ' + track.id);
+            player.loadVideoById({ videoId: track.id, startSeconds: track.start || 0, endSeconds: track.end || undefined });
+        }, 12000),
+    ];
     // a video that doesn't start in 30 s (the game is busy loading, slow connection) is skipped, not blacklisted
     loadTimer = setTimeout(function () {
         if (current !== track || shown) return;
