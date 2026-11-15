@@ -108,12 +108,17 @@ function step(dir) {
     return null;
 }
 
+let noStarts = 0;   // videos in a row that never started; 3 = YouTube isn't working here, give up
+
 function watchStart(track) {
     clearTimeout(loadTimer);
-    // a video that never starts (region locked, removed, slow) is skipped
+    // a video that doesn't start in 30 s (the game is busy loading, slow connection) is skipped, not blacklisted
     loadTimer = setTimeout(function () {
-        if (current === track && !shown) { log('no start in 15s ' + track.id); track.broken = true; playTrack(step(1)); }
-    }, 15000);
+        if (current !== track || shown) return;
+        noStarts++;
+        log('no start in 30s ' + track.id + ' (' + noStarts + ' in a row)');
+        if (noStarts >= 3) fail(); else playTrack(step(1));
+    }, 30000);
 }
 
 function playTrack(track) {
@@ -137,6 +142,7 @@ function onState(e) {
     log('state ' + e.data + ' ' + (current && current.id));
     if (e.data === YT.PlayerState.PLAYING && !switching && current && !shown) {
         shown = true;
+        noStarts = 0;
         clearTimeout(loadTimer);
         fade.classList.add('clear');
         const data = player.getVideoData ? player.getVideoData() : null;
