@@ -68,6 +68,11 @@ function tell(msg) {
     window.parent.postMessage(Object.assign({ crpPlayer: true }, msg), '*');
 }
 
+// what the player is doing, for the loading screen's crpPlayerLog (diagnosis only)
+function log(text) {
+    tell({ type: 'log', text: text });
+}
+
 function shuffle(list) {
     for (let i = list.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -78,6 +83,7 @@ function shuffle(list) {
 
 function fail() {
     if (failed) return;
+    log('failed: nothing left to play');
     failed = true;
     clearTimeout(loadTimer);
     if (player && player.stopVideo) player.stopVideo();
@@ -106,7 +112,7 @@ function watchStart(track) {
     clearTimeout(loadTimer);
     // a video that never starts (region locked, removed, slow) is skipped
     loadTimer = setTimeout(function () {
-        if (current === track && !shown) { track.broken = true; playTrack(step(1)); }
+        if (current === track && !shown) { log('no start in 15s ' + track.id); track.broken = true; playTrack(step(1)); }
     }, 15000);
 }
 
@@ -128,6 +134,7 @@ function playTrack(track) {
 }
 
 function onState(e) {
+    log('state ' + e.data + ' ' + (current && current.id));
     if (e.data === YT.PlayerState.PLAYING && !switching && current && !shown) {
         shown = true;
         clearTimeout(loadTimer);
@@ -139,7 +146,8 @@ function onState(e) {
     }
 }
 
-function onError() {
+function onError(e) {
+    log('error ' + e.data + ' ' + (current && current.id));
     if (switching || !current) return;
     current.broken = true;
     playTrack(step(1));
