@@ -230,7 +230,7 @@ const api = document.createElement('script');
 api.src = 'https://www.youtube.com/iframe_api';
 api.onerror = fail;
 document.head.appendChild(api);
-setTimeout(function () { if (!apiReady) fail(); }, 10000);
+setTimeout(function () { if (!apiReady) fail(); }, 20000);
 
 tell({ type: 'ready' });
 </script>
