@@ -54,7 +54,7 @@ const fade = document.getElementById('fade');
 let tracks = [];
 let order = [];
 let pos = 0;
-let endEarly = 1.5;
+let endEarly = 20;
 let volume = 55;
 let muted = false;
 let player = null;
@@ -172,22 +172,15 @@ setInterval(function () {
 function start() {
     order = shuffle(tracks.map(function (_, i) { return i; }));
     pos = 0;
-    const first = tracks[order[0]];
-    current = first;
+    // the player starts empty and every video, the first included, is started with loadVideoById: autoplay on
+    // creation sat unstarted in FiveM's browser, loadVideoById plays at once
     player = new YT.Player('yt', {
-        videoId: first.id,
         playerVars: {
-            autoplay: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3,
-            modestbranding: 1, playsinline: 1, cc_load_policy: 0, start: first.start || 0,
-            end: first.end || undefined, mute: muted ? 1 : 0,
+            controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3, modestbranding: 1, playsinline: 1,
+            cc_load_policy: 0,
         },
         events: {
-            onReady: function () {
-                player.setVolume(volume);
-                if (muted) player.mute(); else player.unMute();
-                player.playVideo();
-                watchStart(first);
-            },
+            onReady: function () { playTrack(tracks[order[0]]); },
             onStateChange: onState,
             onError: onError,
         },
@@ -209,7 +202,7 @@ window.addEventListener('message', function (e) {
         tracks = (Array.isArray(d.tracks) ? d.tracks : []).filter(function (t) {
             return t && /^[A-Za-z0-9_-]{11}$/.test(t.id);
         }).map(function (t) { return { id: t.id, start: +t.start || 0, end: +t.end || 0, broken: false }; });
-        endEarly = +d.endEarly || 1.5;
+        endEarly = d.endEarly === undefined ? 20 : Math.max(+d.endEarly || 0, 0);
         volume = Math.min(Math.max(+d.volume || 55, 0), 100);
         muted = !!d.muted;
         if (tracks.length === 0) { fail(); return; }
